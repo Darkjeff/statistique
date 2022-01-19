@@ -24,12 +24,18 @@
 // Load Dolibarr environment
 $res = 0;
 // Try main.inc.php into web root known defined into CONTEXT_DOCUMENT_ROOT (not always defined)
-if (!$res && !empty($_SERVER["CONTEXT_DOCUMENT_ROOT"])) $res = @include $_SERVER["CONTEXT_DOCUMENT_ROOT"]."/main.inc.php";
+if (!$res && !empty($_SERVER["CONTEXT_DOCUMENT_ROOT"])) $res = @include $_SERVER["CONTEXT_DOCUMENT_ROOT"] . "/main.inc.php";
 // Try main.inc.php into web root detected using web root calculated from SCRIPT_FILENAME
-$tmp = empty($_SERVER['SCRIPT_FILENAME']) ? '' : $_SERVER['SCRIPT_FILENAME']; $tmp2 = realpath(__FILE__); $i = strlen($tmp) - 1; $j = strlen($tmp2) - 1;
-while ($i > 0 && $j > 0 && isset($tmp[$i]) && isset($tmp2[$j]) && $tmp[$i] == $tmp2[$j]) { $i--; $j--; }
-if (!$res && $i > 0 && file_exists(substr($tmp, 0, ($i + 1))."/main.inc.php")) $res = @include substr($tmp, 0, ($i + 1))."/main.inc.php";
-if (!$res && $i > 0 && file_exists(dirname(substr($tmp, 0, ($i + 1)))."/main.inc.php")) $res = @include dirname(substr($tmp, 0, ($i + 1)))."/main.inc.php";
+$tmp = empty($_SERVER['SCRIPT_FILENAME']) ? '' : $_SERVER['SCRIPT_FILENAME'];
+$tmp2 = realpath(__FILE__);
+$i = strlen($tmp) - 1;
+$j = strlen($tmp2) - 1;
+while ($i > 0 && $j > 0 && isset($tmp[$i]) && isset($tmp2[$j]) && $tmp[$i] == $tmp2[$j]) {
+	$i--;
+	$j--;
+}
+if (!$res && $i > 0 && file_exists(substr($tmp, 0, ($i + 1)) . "/main.inc.php")) $res = @include substr($tmp, 0, ($i + 1)) . "/main.inc.php";
+if (!$res && $i > 0 && file_exists(dirname(substr($tmp, 0, ($i + 1))) . "/main.inc.php")) $res = @include dirname(substr($tmp, 0, ($i + 1))) . "/main.inc.php";
 // Try main.inc.php using relative path
 if (!$res && file_exists("../main.inc.php")) $res = @include "../main.inc.php";
 if (!$res && file_exists("../../main.inc.php")) $res = @include "../../main.inc.php";
@@ -69,7 +75,13 @@ if (empty($year)) {
 $date_start = dol_mktime(0, 0, 0, GETPOST("date_startmonth"), GETPOST("date_startday"), GETPOST("date_startyear"));
 $date_end = dol_mktime(23, 59, 59, GETPOST("date_endmonth"), GETPOST("date_endday"), GETPOST("date_endyear"));
 $companyid = GETPOST('companyid', 'int');
+if ($companyid < 0) {
+	$companyid = 0;
+}
 $prodid = GETPOST('prodid', 'int');
+if ($prodid < 0) {
+	$prodid = 0;
+}
 
 // Quarter
 if (empty($date_start) || empty($date_end)) { // We define date_start and date_end
@@ -263,11 +275,18 @@ while ($i < 12) {
 	print '<td width="60" align="right">' . $langs->trans('MonthShort' . str_pad($j, 2, '0', STR_PAD_LEFT)) . '</td>';
 	$i++;
 }
-print '<td width="60" align="right"><b>' . $langs->trans("Quantity") . '</b></td></tr>';
+
+print '<td width="60" align="right"><b>' . $langs->trans("Total CA") . '</b></td>';
+
+print '<td width="60" align="right"><b>' . $langs->trans("Quantité en commande") . '</b></td>';
+print '<td width="60" align="right"><b>' . $langs->trans("Montant en commande") . '</b></td></tr>';
 
 $sql = "SELECT p.ref AS refproduct,";
 $sql .= " p.label AS product_label,";
+$sql .= " p.rowid AS product_id,";
 $sql .= " soc.nom AS customer,";
+$sql .= " soc.rowid AS company_id,";
+$sql .= " f.fk_statut AS fk_statut,";
 for ($i = 1; $i <= 12; $i++) {
 	$sql .= " SUM(" . $db->ifsql('MONTH(f.date_commande)=' . $i, 'fd.qty', '0') . ") AS month" . str_pad($i, 2, '0', STR_PAD_LEFT) . ",";
 }
@@ -279,23 +298,53 @@ $sql .= "  INNER JOIN " . MAIN_DB_PREFIX . "product as p ON p.rowid = fd.fk_prod
 $sql .= "  LEFT JOIN " . MAIN_DB_PREFIX . "c_country as cc ON cc.rowid = soc.fk_pays";
 $sql .= " WHERE f.date_commande >= '" . $db->idate($date_start) . "'";
 $sql .= "  AND f.date_commande <= '" . $db->idate($date_end) . "'";
-$sql .= " AND f.fk_statut in (1,2)";
+$sql .= " AND f.fk_statut in (1,2,3)";
 if (!empty($companyid)) {
 	$sql .= " AND f.fk_soc=" . (int) $companyid;
 }
 if (!empty($prodid)) {
 	$sql .= " AND fd.fk_product=" . (int) $prodid;
 }
-$sql .= " GROUP BY soc.nom, p.ref";
+$sql .= " GROUP BY soc.rowid, p.rowid";
 
-dol_syslog("htdocs/compta/tva/index.php sql=" . $sql, LOG_DEBUG);
+dol_syslog(__FILE__, LOG_DEBUG);
 $resql = $db->query($sql);
 if ($resql) {
 	$num = $db->num_rows($resql);
 	$totalpermonth = array();
+	$totalInProgress = array();
 	while ($obj = $db->fetch_object($resql)) {
 		print '<tr class="oddeven"><td class="right">' . $obj->refproduct . '</td>';
 		print '<td align="left">' . $obj->product_label . '</td>';
+
+		//Find all quanty in validated order withut date filter
+		$sqldetail = "SELECT ";
+		$sqldetail .= " SUM(fd.qty) AS qtyinorder, ";
+		$sqldetail .= "  SUM(fd.total_ht) as total";
+		$sqldetail .= " FROM " . MAIN_DB_PREFIX . "commandedet as fd";
+		$sqldetail .= "  INNER JOIN " . MAIN_DB_PREFIX . "commande as f ON f.rowid = fd.fk_commande";
+		$sqldetail .= "  INNER JOIN " . MAIN_DB_PREFIX . "societe as soc ON soc.rowid = f.fk_soc";
+		$sqldetail .= "  INNER JOIN " . MAIN_DB_PREFIX . "product as p ON p.rowid = fd.fk_product";
+		$sqldetail .= " WHERE ";
+		$sqldetail .= "  f.fk_soc=" . (int) $obj->company_id;
+		$sqldetail .= " AND fd.fk_product=" . (int) $obj->product_id;
+		$sqldetail .= " AND f.fk_statut in (1,2)";
+		$sqldetail .= " GROUP BY soc.rowid, p.rowid";
+
+		dol_syslog(__FILE__, LOG_DEBUG);
+		$resqldetail = $db->query($sqldetail);
+
+		if ($resqldetail) {
+			$num = $db->num_rows($resqldetail);
+			if ($num>0) {
+				while ($objdetail = $db->fetch_object($resqldetail)) {
+					$totalInProgress[$obj->company_id][$obj->product_id]['qty'] = $objdetail->qtyinorder;
+					$totalInProgress[$obj->company_id][$obj->product_id]['amount'] = $objdetail->total;
+				}
+			}
+		} else {
+			setEventMessage($db->lasterror(), 'errors');
+		}
 
 		print '<td>' . $obj->customer . '</td>';
 		for ($i = 0; $i < 12; $i++) {
@@ -306,6 +355,8 @@ if ($resql) {
 			$totalpermonth[$j] = (empty($totalpermonth[$j]) ? 0 : $totalpermonth[$j]) + $obj->$monthj;
 		}
 		print '<td align="right" width="6%"><b>' . price($obj->total) . '</b></td>';
+		print '<td align="right" width="6%"><b>' . $totalInProgress[$obj->company_id][$obj->product_id]['qty'] . '</b></td>';
+		print '<td align="right" width="6%"><b>' . price($totalInProgress[$obj->company_id][$obj->product_id]['amount']) . '</b></td>';
 		$totalpermonth['total'] = (empty($totalpermonth['total']) ? 0 : $totalpermonth['total']) + $obj->total;
 		print '</tr>';
 	}
@@ -321,89 +372,14 @@ if ($resql) {
 		$monthj = 'month' . str_pad($j, 2, '0', STR_PAD_LEFT);
 		print '<td align="right" width="6%">' . price($totalpermonth[$j]) . '</td>';
 	}
+	print '<td align="right" width="6%">' . price($totalpermonth['total']) . '</td>';
+	print '<td align="right" width="6%">' . price($totalpermonth['total']) . '</td>';
 	print '<td align="right" width="6%"><b>' . price($totalpermonth['total']) . '</b></td>';
 	print '</tr>';
 } else {
-	print $db->lasterror(); // Show last sql error
+	setEventMessage($db->lasterror(), 'errors');
 }
 
-/*
-print '<tr class="liste_titre"><td width="6%" class="right">' . $langs->trans("PurchasebyVatrate") . '</td>';
-print '<td align="left">' . $langs->trans("ProductOrService") . '</td>';
-print '<td align="left">' . $langs->trans("Country") . '</td>';
-$i = 0;
-while ($i < 12) {
-	$j = $i + (empty($conf->global->SOCIETE_FISCAL_MONTH_START) ? 1 : $conf->global->SOCIETE_FISCAL_MONTH_START);
-	if ($j > 12) $j -= 12;
-	print '<td width="60" align="right">' . $langs->trans('MonthShort' . str_pad($j, 2, '0', STR_PAD_LEFT)) . '</td>';
-	$i++;
-}
-print '<td width="60" align="right"><b>' . $langs->trans("TotalHT") . '</b></td></tr>';
-
-$sql2 = "SELECT ffd.tva_tx AS vatrate,";
-$sql2 .= " ffd.product_type AS product_type,";
-$sql2 .= " cc.label AS country,";
-for ($i = 1; $i <= 12; $i++) {
-	$sql2 .= " SUM(" . $db->ifsql('MONTH(ff.datef)=' . $i, 'ffd.total_ht', '0') . ") AS month" . str_pad($i, 2, '0', STR_PAD_LEFT) . ",";
-}
-$sql2 .= "  SUM(ffd.total_ht) as total";
-$sql2 .= " FROM " . MAIN_DB_PREFIX . "facture_fourn_det as ffd";
-$sql2 .= "  INNER JOIN " . MAIN_DB_PREFIX . "facture_fourn as ff ON ff.rowid = ffd.fk_facture_fourn";
-$sql2 .= "  INNER JOIN " . MAIN_DB_PREFIX . "societe as soc ON soc.rowid = ff.fk_soc";
-$sql2 .= "  LEFT JOIN " . MAIN_DB_PREFIX . "c_country as cc ON cc.rowid = soc.fk_pays";
-$sql2 .= " WHERE ff.datef >= '" . $db->idate($date_start) . "'";
-$sql2 .= "  AND ff.datef <= '" . $db->idate($date_end) . "'";
-$sql .= " AND ff.fk_statut in (1,2)";
-if (!empty($conf->global->FACTURE_DEPOSITS_ARE_JUST_PAYMENTS)) {
-	$sql .= " AND ff.type IN (0,1,2,5)";
-} else {
-	$sql .= " AND ff.type IN (0,1,2,3,5)";
-}
-$sql2 .= " AND ff.entity IN (" . getEntity("facture_fourn", 0) . ")";
-$sql2 .= " GROUP BY ffd.tva_tx, ffd.product_type, cc.label";
-
-//print $sql2;
-dol_syslog("htdocs/compta/tva/index.php sql=" . $sql, LOG_DEBUG);
-$resql2 = $db->query($sql2);
-if ($resql2) {
-	$num = $db->num_rows($resql2);
-	$totalpermonth = array();
-	while ($obj = $db->fetch_object($resql2)) {
-		print '<tr class="oddeven"><td class="right">' . vatrate($obj->vatrate) . '</td>';
-		if ($obj->product_type == 0) {
-			print '<td align="left">' . $langs->trans("Product") . '</td>';
-		} else {
-			print '<td align="left">' . $langs->trans("Service") . '</td>';
-		}
-		print '<td>' . $obj->country . '</td>';
-		for ($i = 0; $i < 12; $i++) {
-			$j = $i + (empty($conf->global->SOCIETE_FISCAL_MONTH_START) ? 1 : $conf->global->SOCIETE_FISCAL_MONTH_START);
-			if ($j > 12) $j -= 12;
-			$monthj = 'month' . str_pad($j, 2, '0', STR_PAD_LEFT);
-			print '<td align="right" width="6%">' . price($obj->$monthj) . '</td>';
-			$totalpermonth[$j] = (empty($totalpermonth[$j]) ? 0 : $totalpermonth[$j]) + $obj->$monthj;
-		}
-		print '<td align="right" width="6%"><b>' . price($obj->total) . '</b></td>';
-		$totalpermonth['total'] = (empty($totalpermonth['total']) ? 0 : $totalpermonth['total']) + $obj->total;
-		print '</tr>';
-	}
-	$db->free($resql2);
-
-	// Total
-	print '<tr class="liste_total"><td class="right"></td>';
-	print '<td align="left"></td>';
-	print '<td></td>';
-	for ($i = 0; $i < 12; $i++) {
-		$j = $i + (empty($conf->global->SOCIETE_FISCAL_MONTH_START) ? 1 : $conf->global->SOCIETE_FISCAL_MONTH_START);
-		if ($j > 12) $j -= 12;
-		$monthj = 'month' . str_pad($j, 2, '0', STR_PAD_LEFT);
-		print '<td align="right" width="6%">' . price($totalpermonth[$j]) . '</td>';
-	}
-	print '<td align="right" width="6%"><b>' . price($totalpermonth['total']) . '</b></td>';
-	print '</tr>';
-} else {
-	print $db->lasterror(); // Show last sql error
-}*/
 print "</table>\n";
 
 
