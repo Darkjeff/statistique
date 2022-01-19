@@ -276,7 +276,7 @@ while ($i < 12) {
 	$i++;
 }
 
-print '<td width="60" align="right"><b>' . $langs->trans("Total CA") . '</b></td>';
+print '<td width="60" align="right"><b>' . $langs->trans("Total €") . '</b></td>';
 
 print '<td width="60" align="right"><b>' . $langs->trans("Quantité en commande") . '</b></td>';
 print '<td width="60" align="right"><b>' . $langs->trans("Montant en commande") . '</b></td></tr>';
@@ -313,6 +313,7 @@ if ($resql) {
 	$num = $db->num_rows($resql);
 	$totalpermonth = array();
 	$totalInProgress = array();
+	$totalorderqty=$totalorderamount=0;
 	while ($obj = $db->fetch_object($resql)) {
 		print '<tr class="oddeven"><td class="right">' . $obj->refproduct . '</td>';
 		print '<td align="left">' . $obj->product_label . '</td>';
@@ -356,7 +357,9 @@ if ($resql) {
 		}
 		print '<td align="right" width="6%"><b>' . price($obj->total) . '</b></td>';
 		print '<td align="right" width="6%"><b>' . $totalInProgress[$obj->company_id][$obj->product_id]['qty'] . '</b></td>';
+		$totalorderqty +=  $totalInProgress[$obj->company_id][$obj->product_id]['qty'];
 		print '<td align="right" width="6%"><b>' . price($totalInProgress[$obj->company_id][$obj->product_id]['amount']) . '</b></td>';
+		$totalorderamount +=  $totalInProgress[$obj->company_id][$obj->product_id]['amount'];
 		$totalpermonth['total'] = (empty($totalpermonth['total']) ? 0 : $totalpermonth['total']) + $obj->total;
 		print '</tr>';
 	}
@@ -373,8 +376,8 @@ if ($resql) {
 		print '<td align="right" width="6%">' . price($totalpermonth[$j]) . '</td>';
 	}
 	print '<td align="right" width="6%">' . price($totalpermonth['total']) . '</td>';
-	print '<td align="right" width="6%">' . price($totalpermonth['total']) . '</td>';
-	print '<td align="right" width="6%"><b>' . price($totalpermonth['total']) . '</b></td>';
+	print '<td align="right" width="6%">' . price($totalorderqty) . '</td>';
+	print '<td align="right" width="6%"><b>' . price($totalorderamount) . '</b></td>';
 	print '</tr>';
 } else {
 	setEventMessage($db->lasterror(), 'errors');
