@@ -274,6 +274,7 @@ $out_html = '<table class="noborder" width="100%">';
 $out_html .= '<tr class="liste_titre"><td width="6%" class="right">' . $langs->trans("ref") . '</td>';
 $out_html .= '<td align="left">' . $langs->trans("Product") . '</td>';
 $out_html .= '<td align="left">' . $langs->trans("Customer") . '</td>';
+$out_html .= '<td align="left">' . $langs->trans("CustomKey") . '</td>';
 $i = 0;
 while ($i < 12) {
 	$j = $i + (empty($conf->global->SOCIETE_FISCAL_MONTH_START) ? 1 : $conf->global->SOCIETE_FISCAL_MONTH_START);
@@ -354,6 +355,7 @@ if ($resql) {
 		}
 
 		$out_html .= '<td>' . $obj->customer . '</td>';
+		$out_html .= '<td align="left">' . $obj->refproduct . ' ' . $obj->customer . '</td>';
 		for ($i = 0; $i < 12; $i++) {
 			$j = $i + (empty($conf->global->SOCIETE_FISCAL_MONTH_START) ? 1 : $conf->global->SOCIETE_FISCAL_MONTH_START);
 			if ($j > 12) $j -= 12;
