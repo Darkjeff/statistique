@@ -56,8 +56,8 @@ $backtopage = GETPOST('backtopage', 'alpha');
 $value = GETPOST('value', 'alpha');
 
 $arrayofparameters = array(
-	'STATISTIQUE_MYPARAM1'=>array('css'=>'minwidth200', 'enabled'=>1),
-	'STATISTIQUE_MYPARAM2'=>array('css'=>'minwidth500', 'enabled'=>1)
+	//'STATISTIQUE_MYPARAM1'=>array('css'=>'minwidth200', 'enabled'=>1),
+	'STATISTIQUE_KEY_PUBLIC_PAGE'=>array('css'=>'minwidth500', 'enabled'=>1)
 );
 
 $error = 0;
@@ -186,6 +186,22 @@ $dirmodels = array_merge(array('/'), (array) $conf->modules_parts['models']);
 $page_name = "StatistiqueSetup";
 llxHeader('', $langs->trans($page_name));
 
+if (!empty($conf->use_javascript_ajax)) {
+	print "\n".'<script type="text/javascript">';
+	print '$(document).ready(function () {
+            $("#generate_token").click(function() {
+            	$.get( "'.DOL_URL_ROOT.'/core/ajax/security.php", {
+            		action: \'getrandompassword\',
+            		generic: true
+				},
+				function(token) {
+					$("#STATISTIQUE_KEY_PUBLIC_PAGE").val(token);
+				});
+            });
+    });';
+	print '</script>';
+}
+
 // Subheader
 $linkback = '<a href="'.($backtopage ? $backtopage : DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1').'">'.$langs->trans("BackToModuleList").'</a>';
 
@@ -211,9 +227,16 @@ if ($action == 'edit')
 	foreach ($arrayofparameters as $key => $val)
 	{
 		print '<tr class="oddeven"><td>';
-		$tooltiphelp = (($langs->trans($key.'Tooltip') != $key.'Tooltip') ? $langs->trans($key.'Tooltip') : '');
+		$tooltiphelp = (($langs->trans($key . 'Tooltip') != $key . 'Tooltip') ? $langs->trans($key . 'Tooltip') : '');
 		print $form->textwithpicto($langs->trans($key), $tooltiphelp);
-		print '</td><td><input name="'.$key.'"  class="flat '.(empty($val['css']) ? 'minwidth200' : $val['css']).'" value="'.$conf->global->$key.'"></td></tr>';
+		print '</td><td><input id="' . $key . '" name="' . $key . '"  class="flat ' . (empty($val['css']) ? 'minwidth200' : $val['css']) . '" value="' . $conf->global->$key . '">';
+		if ($key=='STATISTIQUE_KEY_PUBLIC_PAGE') {
+
+			if (!empty($conf->use_javascript_ajax)) {
+				print '&nbsp;' . img_picto($langs->trans('Generate'), 'refresh', 'id="generate_token" class="linkobject"');
+			}
+		}
+		print '</td></tr>';
 	}
 	print '</table>';
 

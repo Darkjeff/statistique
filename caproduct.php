@@ -226,6 +226,10 @@ $productsup = $productcust;
 $amountsup = $amountcust;
 $namesup = $namecust;
 
+if (empty($modecompta)) {
+	$modecompta = "CREANCES-DETTES";
+}
+$action=GETPOST('action','alpha');
 
 // TODO Report from bookkeeping not yet available, so we switch on report on business events
 if ($modecompta == "BOOKKEEPING") $modecompta = "CREANCES-DETTES";
@@ -267,6 +271,7 @@ else $periodlink = '';
 $description .= '  <input type="hidden" name="modecompta" value="' . $modecompta . '">';
 
 report_header($name, '', $period . $client . $product, $periodlink, $description, $builddate, '', array(), $calcmode);
+print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?action=createpublicpage">Génerer la page public</a>';
 
 if (!empty($conf->accounting->enabled) && $modecompta != 'BOOKKEEPING') {
 	print info_admin($langs->trans("WarningReportNotReliable"), 0, 0, 1);
@@ -274,10 +279,10 @@ if (!empty($conf->accounting->enabled) && $modecompta != 'BOOKKEEPING') {
 
 
 if ($modecompta == 'CREANCES-DETTES') {
-	print '<table class="noborder" width="100%">';
-	print '<tr class="liste_titre"><td width="6%" class="right">' . $langs->trans("ref") . '</td>';
-	print '<td align="left">' . $langs->trans("Product") . '</td>';
-	print '<td align="left">' . $langs->trans("Customer") . '</td>';
+	$out_html = '<table class="noborder" width="100%">';
+	$out_html .= '<tr class="liste_titre"><td width="6%" class="right">' . $langs->trans("ref") . '</td>';
+	$out_html .= '<td align="left">' . $langs->trans("Product") . '</td>';
+	$out_html .= '<td align="left">' . $langs->trans("Customer") . '</td>';
 	$i = 0;
 	while ($i < 12) {
 		$j = $i + (empty($conf->global->SOCIETE_FISCAL_MONTH_START) ? 1 : $conf->global->SOCIETE_FISCAL_MONTH_START);
@@ -285,9 +290,9 @@ if ($modecompta == 'CREANCES-DETTES') {
 		print '<td width="60" align="right">' . $langs->trans('MonthShort' . str_pad($j, 2, '0', STR_PAD_LEFT)) . '</td>';
 		$i++;
 	}
-	print '<td width="60" align="right"><b>' . $langs->trans("Total CA") . '</b></td>';
-	print '<td width="60" align="right"><b>' . $langs->trans("Quantité en commande") . '</b></td>';
-	print '<td width="60" align="right"><b>' . $langs->trans("Montant en commande") . '</b></td></tr>';
+	$out_html .= '<td width="60" align="right"><b>' . $langs->trans("Total CA") . '</b></td>';
+	$out_html .= '<td width="60" align="right"><b>' . $langs->trans("Quantité en commande") . '</b></td>';
+	$out_html .= '<td width="60" align="right"><b>' . $langs->trans("Montant en commande") . '</b></td></tr>';
 
 	$sql = "SELECT p.ref AS refproduct,";
 	$sql .= " p.label AS product_label,";
@@ -328,8 +333,8 @@ if ($modecompta == 'CREANCES-DETTES') {
 		$totalInProgress = array();
 		$totalorderqty=$totalorderamount=0;
 		while ($obj = $db->fetch_object($resql)) {
-			print '<tr class="oddeven"><td class="right">' . $obj->refproduct . '</td>';
-			print '<td align="left">' . $obj->product_label . '</td>';
+			$out_html .= '<tr class="oddeven"><td class="right">' . $obj->refproduct . '</td>';
+			$out_html .= '<td align="left">' . $obj->product_label . '</td>';
 
 			//Find all quanty in validated order withut date filter
 			$sqldetail = "SELECT ";
@@ -360,49 +365,72 @@ if ($modecompta == 'CREANCES-DETTES') {
 				setEventMessage($db->lasterror(), 'errors');
 			}
 
-			print '<td>' . $obj->customer . '</td>';
+			$out_html .= '<td>' . $obj->customer . '</td>';
 			for ($i = 0; $i < 12; $i++) {
 				$j = $i + (empty($conf->global->SOCIETE_FISCAL_MONTH_START) ? 1 : $conf->global->SOCIETE_FISCAL_MONTH_START);
 				if ($j > 12) $j -= 12;
 				$monthj = 'month' . str_pad($j, 2, '0', STR_PAD_LEFT);
-				print '<td align="right" width="6%">' . price($obj->$monthj) . '</td>';
+				$out_html .= '<td align="right" width="6%">' . price($obj->$monthj) . '</td>';
 				$totalpermonth[$j] = (empty($totalpermonth[$j]) ? 0 : $totalpermonth[$j]) + $obj->$monthj;
 			}
-			print '<td align="right" width="6%"><b>' . price($obj->total) . '</b></td>';
-			print '<td align="right" width="6%"><b>' . $totalInProgress[$obj->company_id][$obj->product_id]['qty'] . '</b></td>';
+			$out_html .= '<td align="right" width="6%"><b>' . price($obj->total) . '</b></td>';
+			$out_html .= '<td align="right" width="6%"><b>' . $totalInProgress[$obj->company_id][$obj->product_id]['qty'] . '</b></td>';
 			$totalorderqty +=  $totalInProgress[$obj->company_id][$obj->product_id]['qty'];
-			print '<td align="right" width="6%"><b>' . price($totalInProgress[$obj->company_id][$obj->product_id]['amount']) . '</b></td>';
+			$out_html .= '<td align="right" width="6%"><b>' . price($totalInProgress[$obj->company_id][$obj->product_id]['amount']) . '</b></td>';
 			$totalorderamount +=  $totalInProgress[$obj->company_id][$obj->product_id]['amount'];
 			$totalpermonth['total'] = (empty($totalpermonth['total']) ? 0 : $totalpermonth['total']) + $obj->total;
-			print '</tr>';
+			$out_html .= '</tr>';
 		}
 		$db->free($resql);
 
 		// Total
-		print '<tr class="liste_total"><td class="right"></td>';
-		print '<td align="left"></td>';
-		print '<td></td>';
+		$out_html .= '<tr class="liste_total"><td class="right"></td>';
+		$out_html .= '<td align="left"></td>';
+		$out_html .= '<td></td>';
 		for ($i = 0; $i < 12; $i++) {
 			$j = $i + (empty($conf->global->SOCIETE_FISCAL_MONTH_START) ? 1 : $conf->global->SOCIETE_FISCAL_MONTH_START);
 			if ($j > 12) $j -= 12;
 			$monthj = 'month' . str_pad($j, 2, '0', STR_PAD_LEFT);
-			print '<td align="right" width="6%">' . price($totalpermonth[$j]) . '</td>';
+			$out_html .= '<td align="right" width="6%">' . price($totalpermonth[$j]) . '</td>';
 		}
-		print '<td align="right" width="6%"><b>' . price($totalpermonth['total']) . '</b></td>';
-		print '<td align="right" width="6%">' . price($totalorderqty) . '</td>';
-		print '<td align="right" width="6%"><b>' . price($totalorderamount) . '</b></td>';
-		print '</tr>';
+		$out_html .= '<td align="right" width="6%"><b>' . price($totalpermonth['total']) . '</b></td>';
+		$out_html .= '<td align="right" width="6%">' . price($totalorderqty) . '</td>';
+		$out_html .= '<td align="right" width="6%"><b>' . price($totalorderamount) . '</b></td>';
+		$out_html .= '</tr>';
 	} else {
 		print $db->lasterror(); // Show last sql error
 	}
 
-	print "</table>\n";
+	$out_html .= "</table>\n";
+
+	print $out_html;
 } else {
 	// $modecompta != 'CREANCES-DETTES'
 	// "Calculation of part of each product for accountancy in this mode is not possible. When a partial payment (for example 5 euros) is done on an
 	// invoice with 2 product (product A for 10 euros and product B for 20 euros), what is part of paiment for product A and part of paiment for product B ?
 	// Because there is no way to know this, this report is not relevant.
 	print '<br>' . $langs->trans("TurnoverPerSaleTaxRateInCommitmentAccountingNotRelevant") . '<br>';
+}
+
+
+
+if ($action=='createpublicpage') {
+	//var_dump(dol_buildpath('/statistique/public/',0).'cmdproduct.html');
+	$handle = fopen(dol_buildpath('/statistique/public/', 0).'caproduct.txt', "w");
+	if (!$handle) {
+		setEventMessage('Impossible de creer la page public', 'errors');
+	} else {
+		if (fwrite($handle, $out_html) === false) {
+			setEventMessage('Impossible d ecrire dans le fichier de la page public', 'errors');
+		}
+	}
+}
+
+if (file_exists(dol_buildpath('/statistique/public/caproduct.txt'))) {
+	if (empty($conf->global->STATISTIQUE_KEY_PUBLIC_PAGE)) {
+		setEventMessage('La configuration du module est incompléte, Clef manquante', 'errors');
+	}
+	print '<a href="'.dol_buildpath('/statistique/public/caproduct.php', 3).'?hashkey='.$conf->global->STATISTIQUE_KEY_PUBLIC_PAGE.'">Lien public</a>';
 }
 
 // End of page
