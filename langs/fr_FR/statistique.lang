@@ -46,3 +46,6 @@ MyPageName = Nom de ma page
 #
 MyWidget = Mon widget
 MyWidgetDescription = Description de mon widget
+
+
+STATISTIQUE_KEY_PUBLIC_PAGE=Clef pour la page public
