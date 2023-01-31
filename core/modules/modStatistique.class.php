@@ -101,7 +101,7 @@ class modStatistique extends DolibarrModules
 				//   '/statistique/js/statistique.js.php',
 			),
 			// Set here all hooks context managed by module. To find available hook context, make a "grep -r '>initHooks(' *" on source code. You can also set hook context to 'all'
-			'hooks' => array( 'thirdpartycard', 'suppliercard'
+			'hooks' => array( 'thirdpartycard', 'suppliercard', 'orderlist', 'thirdpartycomm'
 				//   'data' => array(
 				//       'hookcontext1',
 				//       'hookcontext2',
@@ -410,7 +410,7 @@ class modStatistique extends DolibarrModules
 		// Create extrafields during init
 		include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 		$extrafields = new ExtraFields($this->db);
-		$resultExtrafields=$extrafields->addExtraField('fk_soc_platform', "Plateforme", 'sellist', 202, 0, 'thirdparty', 0, 0, '0', array('options'=>array('societe:nom:rowid::status=1 AND rowid IN ($SEL$ fk_soc FROM '.MAIN_DB_PREFIX.'categorie_fournisseur WHERE fk_categorie=__STATISTIQUE_TAG_PLATFORME__) '=>null)), 1, '', 1, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');
+		$resultExtrafields=$extrafields->addExtraField('fk_soc_platform', "Plateforme", 'link', 202, 0, 'thirdparty', 0, 0, '0', array('options'=>array('Societe:societe/class/societe.class.php:status=1 AND rowid IN ($SEL$ fk_soc FROM '.MAIN_DB_PREFIX.'categorie_fournisseur WHERE fk_categorie=__STATISTIQUE_TAG_PLATFORME__) '=>null)), 1, '', 1, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');
 		if ($resultExtrafields<0) setEventMessages($extrafields->error, $extrafields->errors, 'errors');
 		//$result1=$extrafields->addExtraField('fk_soc_platforme', "Plateforme", 'boolean', 1,  3, 'thirdparty',   0, 0, '', '', 1, '', 0, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');
 		//$result2=$extrafields->addExtraField('statistique_myattr2', "New Attr 2 label", 'varchar', 1, 10, 'project',      0, 0, '', '', 1, '', 0, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');

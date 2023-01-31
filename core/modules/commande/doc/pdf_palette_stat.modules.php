@@ -362,7 +362,7 @@ class pdf_palette_stat extends ModelePDFStatistique
 						if (array_key_exists('options_qtepalette',$product->array_options)) {
 							$nb_p_per_pal = $product->array_options['options_qtepalette'];
 							if (!empty($nb_p_per_pal)) {
-								$nb_pal=round($line->qty/$nb_p_per_pal);
+								$nb_pal+=round($line->qty/$nb_p_per_pal);
 							}
 						}
 					}
