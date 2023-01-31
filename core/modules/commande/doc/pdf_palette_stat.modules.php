@@ -349,7 +349,7 @@ class pdf_palette_stat extends ModelePDFStatistique
 				//$nexY = $tab_top + $this->tabTitleHeight;
 
 				//Calc Nblines
-				$nb_pal=1;
+				$nb_pal=0;
 				foreach ($object->lines as $line) {
 					if (!empty($line->fk_product)) {
 						$product=new Product($this->db);
