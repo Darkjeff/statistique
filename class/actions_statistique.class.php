@@ -131,7 +131,7 @@ class ActionsStatistique
 
 		if (in_array($parameters['currentcontext'], array('orderlist'))) {
 			$label = img_picto('', 'pdf', 'class="pictofixedwidth"') . $langs->trans("PDF Etiquette Palette ");
-			//$this->resprints = '<option value="pdf_palette" data-html="' . dol_escape_htmltag($label) . '">' . $label . '</option>';
+			$this->resprints = '<option value="pdf_palette" data-html="' . dol_escape_htmltag($label) . '">' . $label . '</option>';
 		}
 
 		if (!$error) {
@@ -158,7 +158,7 @@ class ActionsStatistique
 		$error = 0; // Error counter
 
 		if (in_array($parameters['currentcontext'], array('orderlist')) && $action == 'pdf_palette') {
-			$diroutputmassaction = $conf->commande->multidir_output[$conf->entity].'/temp/massgeneration/'.$user->id;
+			$diroutputmassaction = $conf->commande->multidir_output[$conf->entity] . '/temp/massgeneration/' . $user->id;
 			$uploaddir = $conf->commande->multidir_output[$conf->entity];
 			if (empty($diroutputmassaction)) {
 				dol_print_error(null, 'include of actions_massactions.inc.php is done but var $diroutputmassaction was not defined');
@@ -178,6 +178,46 @@ class ActionsStatistique
 				$objecttmp = new Commande($db); // must create new instance because instance is saved into $listofobjectref array for future use
 				$result = $objecttmp->fetch($toselectid);
 				if ($result > 0) {
+					$outputlangs = $langs;
+					$newlang = '';
+
+					if ($conf->global->MAIN_MULTILANGS && empty($newlang) && GETPOST('lang_id', 'aZ09')) {
+						$newlang = GETPOST('lang_id', 'aZ09');
+					}
+					if ($conf->global->MAIN_MULTILANGS && empty($newlang) && isset($objecttmp->thirdparty->default_lang)) {
+						$newlang = $objecttmp->thirdparty->default_lang; // for proposal, order, invoice, ...
+					}
+					if ($conf->global->MAIN_MULTILANGS && empty($newlang) && isset($objecttmp->default_lang)) {
+						$newlang = $objecttmp->default_lang; // for thirdparty
+					}
+					if (!empty($newlang)) {
+						$outputlangs = new Translate("", $conf);
+						$outputlangs->setDefaultLang($newlang);
+					}
+
+					// To be sure vars is defined
+					if (empty($hidedetails)) {
+						$hidedetails = (!empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
+					}
+					if (empty($hidedesc)) {
+						$hidedesc = (!empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0);
+					}
+					if (empty($hideref)) {
+						$hideref = (!empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
+					}
+					if (empty($moreparams)) {
+						$moreparams = null;
+					}
+
+					$result = $objecttmp->generateDocument('pdf_plaette_stat', $outputlangs, $hidedetails, $hidedesc, $hideref, $moreparams);
+
+					if ($result <= 0) {
+						setEventMessages($objecttmp->error, $objecttmp->errors, 'errors');
+						$error++;
+						break;
+					} else {
+						$nbok++;
+					}
 					$listofobjectid[$toselectid] = $toselectid;
 					$thirdpartyid = $objecttmp->fk_soc ? $objecttmp->fk_soc : $objecttmp->socid;
 					$listofobjectthirdparties[$thirdpartyid] = $thirdpartyid;
@@ -187,10 +227,10 @@ class ActionsStatistique
 
 			$arrayofinclusion = array();
 			foreach ($listofobjectref as $tmppdf) {
-				$arrayofinclusion[] = '^' . preg_quote(dol_sanitizeFileName($tmppdf), '/') . '\.pdf$';
+				$arrayofinclusion[] = '^palette_' . preg_quote(dol_sanitizeFileName($tmppdf), '/') . '\.pdf$';
 			}
 			foreach ($listofobjectref as $tmppdf) {
-				$arrayofinclusion[] = '^' . preg_quote(dol_sanitizeFileName($tmppdf), '/') . '_[a-zA-Z0-9\-\_\']+\.pdf$'; // To include PDF generated from ODX files
+				$arrayofinclusion[] = '^palette_' . preg_quote(dol_sanitizeFileName($tmppdf), '/') . '_[a-zA-Z0-9\-\_\']+\.pdf$'; // To include PDF generated from ODX files
 			}
 			$listoffiles = dol_dir_list($uploaddir, 'all', 1, implode('|', $arrayofinclusion), '\.meta$|\.png', 'date', SORT_DESC, 0, true);
 
@@ -218,6 +258,59 @@ class ActionsStatistique
 			if (!empty($newlang)) {
 				$outputlangs = new Translate("", $conf);
 				$outputlangs->setDefaultLang($newlang);
+			}
+
+			// Create empty PDF
+			$formatarray = pdf_getFormat();
+			$page_largeur = $formatarray['width'];
+			$page_hauteur = $formatarray['height'];
+			$format = array($page_largeur, $page_hauteur);
+
+			$pdf = pdf_getInstance($format);
+
+			if (class_exists('TCPDF')) {
+				$pdf->setPrintHeader(false);
+				$pdf->setPrintFooter(false);
+			}
+			$pdf->SetFont(pdf_getPDFFont($outputlangs));
+
+			if (!empty($conf->global->MAIN_DISABLE_PDF_COMPRESSION)) {
+				$pdf->SetCompression(false);
+			}
+
+			// Add all others
+			foreach ($files as $file) {
+				// Charge un document PDF depuis un fichier.
+				$pagecount = $pdf->setSourceFile($file);
+				for ($i = 1; $i <= $pagecount; $i++) {
+					$tplidx = $pdf->importPage($i);
+					$s = $pdf->getTemplatesize($tplidx);
+					$pdf->AddPage($s['h'] > $s['w'] ? 'P' : 'L');
+					$pdf->useTemplate($tplidx);
+				}
+			}
+
+			// Create output dir if not exists
+			dol_mkdir($diroutputmassaction);
+			$objectlabel='Palette';
+			// Defined name of merged file
+			$filename = strtolower(dol_sanitizeFileName($langs->transnoentities($objectlabel)));
+			$filename = preg_replace('/\s/', '_', $filename);
+
+			// Save merged file
+
+			if ($pagecount) {
+				$now = dol_now();
+				$file = $diroutputmassaction . '/' . $filename . '_' . dol_print_date($now, 'dayhourlog') . '.pdf';
+				$pdf->Output($file, 'F');
+				if (!empty($conf->global->MAIN_UMASK)) {
+					@chmod($file, octdec($conf->global->MAIN_UMASK));
+				}
+
+				$langs->load("exports");
+				setEventMessages($langs->trans('FileSuccessfullyBuilt', $filename . '_' . dol_print_date($now, 'dayhourlog')), null, 'mesgs');
+			} else {
+				setEventMessages($langs->trans('NoPDFAvailableForDocGenAmongChecked'), null, 'errors');
 			}
 		}
 	}
