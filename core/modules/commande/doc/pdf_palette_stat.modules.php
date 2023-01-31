@@ -311,30 +311,16 @@ class pdf_palette_stat extends ModelePDFStatistique
 				if (!empty($tplidx)) $pdf->useTemplate($tplidx);
 				$pagenb++;
 
-				//$top_shift = $this->_pagehead($pdf, $object, 1, $outputlangs, $outputlangsbis);
 				$top_shift = 0;
 				$pdf->SetFont('', '', $default_font_size - 1);
 				$pdf->MultiCell(0, 3, ''); // Set interline to 3
 				$pdf->SetTextColor(0, 0, 0);
 
 				$tab_top = 90 + $top_shift;
-				$tab_top_newpage = (empty($conf->global->MAIN_PDF_DONOTREPEAT_HEAD) ? 42 + $top_shift : 10);
-				$tab_height = 130 - $top_shift;
+
 				$tab_height_newpage = 150;
 				if (empty($conf->global->MAIN_PDF_DONOTREPEAT_HEAD)) $tab_height_newpage -= $top_shift;
 
-				$nexY = $tab_top - 1;
-
-				// Display notes
-				$notetoshow = empty($object->note_public) ? '' : $object->note_public;
-				// Extrafields in note
-				/*$extranote = $this->getExtrafieldsInHtml($object, $outputlangs);
-				if (!empty($extranote))
-				{
-					$notetoshow = dol_concatdesc($notetoshow, $extranote);
-				}*/
-
-				$pagenb = $pdf->getPage();
 				$pdf->setPageOrientation('L', 0, 0); // The only function to edit the bottom margin of current page to set it.
 
 				$height_note = 0;
