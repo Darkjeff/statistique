@@ -264,10 +264,18 @@ else $periodlink = '';
 $description .= '  <input type="hidden" name="modecompta" value="' . $modecompta . '">';
 
 report_header($name, '', $period . $client . $product, $periodlink, $description, $builddate, '', array(), $calcmode);
-print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?action=createpublicpage">Génerer la page public</a>';
+
+print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?action=createpublicpage&'.$morequerystring.'">Génerer la page public</a>';
 
 if (!empty($conf->accounting->enabled) && $modecompta != 'BOOKKEEPING') {
 	print info_admin($langs->trans("WarningReportNotReliable"), 0, 0, 1);
+}
+
+if (file_exists(dol_buildpath('/statistique/public/cmdproduct.txt'))) {
+	if (empty($conf->global->STATISTIQUE_KEY_PUBLIC_PAGE)) {
+		setEventMessage('La configuration du module est incompléte, Clef manquante', 'errors');
+	}
+	print '<a href="'.dol_buildpath('/statistique/public/cmdproduct.php', 3).'?hashkey='.$conf->global->STATISTIQUE_KEY_PUBLIC_PAGE.'" target="_blank">Lien public</a>';
 }
 
 $out_html = '<table class="noborder" width="100%">';
@@ -409,12 +417,7 @@ if ($action=='createpublicpage') {
 	}
 }
 
-if (file_exists(dol_buildpath('/statistique/public/cmdproduct.txt'))) {
-	if (empty($conf->global->STATISTIQUE_KEY_PUBLIC_PAGE)) {
-		setEventMessage('La configuration du module est incompléte, Clef manquante', 'errors');
-	}
-	print '<a href="'.dol_buildpath('/statistique/public/cmdproduct.php', 3).'?hashkey='.$conf->global->STATISTIQUE_KEY_PUBLIC_PAGE.'">Lien public</a>';
-}
+
 
 // End of page
 llxFooter();
