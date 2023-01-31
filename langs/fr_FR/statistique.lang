@@ -49,3 +49,4 @@ MyWidgetDescription = Description de mon widget
 
 
 STATISTIQUE_KEY_PUBLIC_PAGE=Clef pour la page public
+STATISTIQUE_TAG_PLATFORME=Tag fournisseur pour qui définie les platformes
