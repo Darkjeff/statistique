@@ -35,7 +35,7 @@ require_once DOL_DOCUMENT_ROOT.'/compta/bank/class/account.class.php'; // requir
 /**
  *	Parent class for documents models
  */
-abstract class ModelePDFMyObject extends CommonDocGenerator
+abstract class ModelePDFStatistique extends CommonDocGenerator
 {
 
 	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps
@@ -51,7 +51,7 @@ abstract class ModelePDFMyObject extends CommonDocGenerator
 		// phpcs:enable
 		global $conf;
 
-		$type = 'myobject';
+		$type = 'statistique';
 		$list = array();
 
 		include_once DOL_DOCUMENT_ROOT.'/core/lib/functions2.lib.php';
@@ -66,7 +66,7 @@ abstract class ModelePDFMyObject extends CommonDocGenerator
 /**
  *  Parent class to manage numbering of MyObject
  */
-abstract class ModeleNumRefMyObject
+abstract class ModeleNumRefStatistique
 {
 	/**
 	 * @var string Error code (or message)
