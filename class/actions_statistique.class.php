@@ -157,7 +157,7 @@ class ActionsStatistique
 
 		$error = 0; // Error counter
 
-		if (in_array($parameters['currentcontext'], array('orderlist')) && $action == 'pdf_palette') {
+		if (in_array($parameters['currentcontext'], array('orderlist')) && GETPOST('massaction', 'alpha') == 'pdf_palette') {
 			$diroutputmassaction = $conf->commande->multidir_output[$conf->entity] . '/temp/massgeneration/' . $user->id;
 			$uploaddir = $conf->commande->multidir_output[$conf->entity];
 			if (empty($diroutputmassaction)) {
@@ -170,12 +170,12 @@ class ActionsStatistique
 			require_once DOL_DOCUMENT_ROOT . '/core/lib/pdf.lib.php';
 			require_once DOL_DOCUMENT_ROOT . '/core/lib/date.lib.php';
 
-			$objecttmp = new Commande($db);
+			$objecttmp = new Commande($this->db);
 			$listofobjectid = array();
 			$listofobjectthirdparties = array();
 			$listofobjectref = array();
 			foreach ($toselect as $toselectid) {
-				$objecttmp = new Commande($db); // must create new instance because instance is saved into $listofobjectref array for future use
+				$objecttmp = new Commande($this->db); // must create new instance because instance is saved into $listofobjectref array for future use
 				$result = $objecttmp->fetch($toselectid);
 				if ($result > 0) {
 					$outputlangs = $langs;
@@ -209,7 +209,7 @@ class ActionsStatistique
 						$moreparams = null;
 					}
 
-					$result = $objecttmp->generateDocument('pdf_plaette_stat', $outputlangs, $hidedetails, $hidedesc, $hideref, $moreparams);
+					$result = $objecttmp->generateDocument('palette_stat', $outputlangs, $hidedetails, $hidedesc, $hideref, $moreparams);
 
 					if ($result <= 0) {
 						setEventMessages($objecttmp->error, $objecttmp->errors, 'errors');
