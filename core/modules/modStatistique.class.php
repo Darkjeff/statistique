@@ -101,7 +101,7 @@ class modStatistique extends DolibarrModules
 				//   '/statistique/js/statistique.js.php',
 			),
 			// Set here all hooks context managed by module. To find available hook context, make a "grep -r '>initHooks(' *" on source code. You can also set hook context to 'all'
-			'hooks' => array(
+			'hooks' => array( 'thirdpartycard', 'suppliercard'
 				//   'data' => array(
 				//       'hookcontext1',
 				//       'hookcontext2',
@@ -408,9 +408,11 @@ class modStatistique extends DolibarrModules
 		if ($result < 0) return -1; // Do not activate module if error 'not allowed' returned when loading module SQL queries (the _load_table run sql with run_sql with the error allowed parameter set to 'default')
 
 		// Create extrafields during init
-		//include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
-		//$extrafields = new ExtraFields($this->db);
-		//$result1=$extrafields->addExtraField('statistique_myattr1', "New Attr 1 label", 'boolean', 1,  3, 'thirdparty',   0, 0, '', '', 1, '', 0, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');
+		include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
+		$extrafields = new ExtraFields($this->db);
+		$resultExtrafields=$extrafields->addExtraField('fk_soc_platform', "Plateforme", 'sellist', 202, 0, 'thirdparty', 0, 0, '0', array('options'=>array('societe:nom:rowid::status=1 AND rowid IN ($SEL$ fk_soc FROM '.MAIN_DB_PREFIX.'categorie_fournisseur WHERE fk_categorie=__STATISTIQUE_TAG_PLATFORME__) '=>null)), 1, '', 1, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');
+		if ($resultExtrafields<0) setEventMessages($extrafields->error, $extrafields->errors, 'errors');
+		//$result1=$extrafields->addExtraField('fk_soc_platforme', "Plateforme", 'boolean', 1,  3, 'thirdparty',   0, 0, '', '', 1, '', 0, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');
 		//$result2=$extrafields->addExtraField('statistique_myattr2', "New Attr 2 label", 'varchar', 1, 10, 'project',      0, 0, '', '', 1, '', 0, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');
 		//$result3=$extrafields->addExtraField('statistique_myattr3', "New Attr 3 label", 'varchar', 1, 10, 'bank_account', 0, 0, '', '', 1, '', 0, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');
 		//$result4=$extrafields->addExtraField('statistique_myattr4', "New Attr 4 label", 'select',  1,  3, 'thirdparty',   0, 1, '', array('options'=>array('code1'=>'Val1','code2'=>'Val2','code3'=>'Val3')), 1,'', 0, 0, '', '', 'statistique@statistique', '$conf->statistique->enabled');
