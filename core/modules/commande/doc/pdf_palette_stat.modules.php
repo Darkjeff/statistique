@@ -357,11 +357,11 @@ class pdf_palette_stat extends ModelePDFStatistique
 				// Loop on each palette
 				for ($i = 1; $i <= $nb_pal; $i++) {
 					$curY = $this->marge_haute;
-					$pdf->SetFont('', '', $default_font_size + 10); // Into loop to work with multipage
+					$pdf->SetFont('', '', $default_font_size + 20); // Into loop to work with multipage
 					$pdf->SetTextColor(0, 0, 0);
 
 
-					$pdf->writeHTMLCell(0, 2, $this->marge_gauche, $curY, '0000000', 0, 1, 0, true, 'L');
+					$pdf->writeHTMLCell(0, 2, $this->marge_gauche, $curY, '<b>111650<b>', 0, 1, 0, true, 'L');
 
 					$curY = $pdf->getY()+20;
 
@@ -374,16 +374,16 @@ class pdf_palette_stat extends ModelePDFStatistique
 					$curY = $curY + $imglinesize['height']*2.5 + 20;
 
 					//Nom magagin
-					$pdf->writeHTMLCell(0, 2, $this->marge_gauche, $curY, $object->thirdparty->name, 0, 1, 0, true, 'C');
+					$pdf->writeHTMLCell(0, 2, $this->marge_gauche, $curY, '<B>'.$object->thirdparty->name.'</B>', 0, 1, 0, true, 'C');
 
 					$curY = $pdf->getY()+50;
 
 					//Nom magagin
-					$pdf->writeHTMLCell(0, 2, $this->marge_gauche, $curY, $object->ref_client, 0, 1, 0, true, 'C');
+					$pdf->writeHTMLCell(0, 2, $this->marge_gauche, $curY, '<B>'.$object->ref_client.'</B>', 0, 1, 0, true, 'C');
 
 					$curY = $pdf->getY()+20;
 
-					$pdf->writeHTMLCell(0, 2, $this->marge_gauche, $curY,$i.'/'.$nb_pal, 0, 1, 0, true, 'C');
+					$pdf->writeHTMLCell(0, 2, $this->marge_gauche, $curY,'<B>'.$i.'/'.$nb_pal.'</B>', 0, 1, 0, true, 'C');
 
 					if ($i!=$nb_pal) {
 						$pdf->AddPage();
