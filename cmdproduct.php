@@ -75,6 +75,7 @@ if (empty($year)) {
 $date_start = dol_mktime(0, 0, 0, GETPOST("date_startmonth"), GETPOST("date_startday"), GETPOST("date_startyear"));
 $date_end = dol_mktime(23, 59, 59, GETPOST("date_endmonth"), GETPOST("date_endday"), GETPOST("date_endyear"));
 $companyid = GETPOST('companyid', 'int');
+$parentcompanyid = GETPOST('parentcompanyid', 'int');
 if ($companyid < 0) {
 	$companyid = 0;
 }
@@ -168,7 +169,7 @@ $paymentexpensereport_static = new PaymentExpenseReport($db);
 
 $morequerystring = '';
 $listofparams = array('date_startmonth', 'date_startyear', 'date_startday', 'date_endmonth', 'date_endyear',
-					  'date_endday');
+					  'date_endday','parentcompanyid');
 foreach ($listofparams as $param) {
 	if (GETPOST($param) != '') $morequerystring .= ($morequerystring ? '&' : '') . $param . '=' . GETPOST($param);
 }
@@ -225,7 +226,6 @@ $amountcust = $langs->trans("AmountHT");
 $elementsup = $langs->trans("SuppliersInvoices");
 $productsup = $productcust;
 $amountsup = $amountcust;
-$namesup = $namecust;
 
 // TODO Report from bookkeeping not yet available, so we switch on report on business events
 if ($modecompta == "BOOKKEEPING") $modecompta = "CREANCES-DETTES";
@@ -257,13 +257,29 @@ if ($modecompta == "CREANCES-DETTES") {
 }
 $period = $form->selectDate($date_start, 'date_start', 0, 0, 0, '', 1, 0) . ' - ' . $form->selectDate($date_end, 'date_end', 0, 0, 0, '', 1, 0);
 $client = '<br />' . $langs->trans('Customer') . $form->select_company($companyid, 'companyid', '', 1, 0, 0, array(), 0);
+
+$nonParentsCompany = array();
+$sqlNonParentsCompany="SELECT s.rowid,s.nom
+	FROM ".MAIN_DB_PREFIX."societe as s
+	WHERE s.rowid NOT IN (SELECT DISTINCT sin.parent FROM ".MAIN_DB_PREFIX."societe as sin WHERE sin.parent IS NOT NULL)";
+$resqlNonParentsCompany = $db->query($sqlNonParentsCompany);
+if ($resqlNonParentsCompany) {
+	if ($db->num_rows($resqlNonParentsCompany) >0) {
+		while ($objNonParentsCompany = $db->fetch_object($resqlNonParentsCompany)) {
+			$nonParentsCompany[$objNonParentsCompany->rowid]=$objNonParentsCompany->rowid;
+		}
+	}
+
+}
+$parentclient = '<br />' . $langs->trans('ParentCompany') . $form->select_company($parentcompanyid, 'parentcompanyid', '', 1, 0, 0, array(), 0,'minwidth100','','',1,array(),false, $nonParentsCompany);
+
 $product = '<br />' . $langs->trans('Product') . $form->select_produits($prodid, 'prodid', '', 0, 0, 1, 2, '', 0, array(), 0, 1, 0, '', 0, '', array(), 1);
 if ($date_end == dol_time_plus_duree($date_start, 1, 'y') - 1) $periodlink = '<a href="' . $_SERVER["PHP_SELF"] . '?year=' . ($year_start - 1) . '&modecompta=' . $modecompta . '">' . img_previous() . '</a> <a href="' . $_SERVER["PHP_SELF"] . '?year=' . ($year_start + 1) . '&modecompta=' . $modecompta . '">' . img_next() . '</a>';
 else $periodlink = '';
 
 $description .= '  <input type="hidden" name="modecompta" value="' . $modecompta . '">';
 
-report_header($name, '', $period . $client . $product, $periodlink, $description, $builddate, '', array(), $calcmode);
+report_header($name, '', $period . $parentclient. $client . $product, $periodlink, $description, $builddate, '', array(), $calcmode);
 
 print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?action=createpublicpage&'.$morequerystring.'">Génerer la page public</a>';
 
@@ -317,8 +333,11 @@ $sql .= " AND f.fk_statut in (1,2,3)";
 if (!empty($companyid)) {
 	$sql .= " AND f.fk_soc=" . (int) $companyid;
 }
-if (!empty($prodid)) {
-	$sql .= " AND fd.fk_product=" . (int) $prodid;
+if (!empty($companyid)) {
+	$sql .= " AND f.fk_soc=" . (int) $companyid;
+}
+if (!empty($parentcompanyid)) {
+	$sql .= " AND soc.parent=" . (int) $parentcompanyid;
 }
 $sql .= " GROUP BY soc.rowid, p.rowid";
 
